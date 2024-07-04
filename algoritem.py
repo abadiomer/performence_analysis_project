@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-print("hell23456dsadsa")
-=======
 import pandas as pd
 
 # קריאת קובץ האקסל עם הנתיב המעודכן
@@ -10,14 +7,21 @@ dishes_data = pd.read_excel(file_path, sheet_name='Dishs')
 
 # דוגמה לשימוש בקלטים מהמשתמש
 budget = float(input("הכנס את התקציב המקסימלי: "))
-required_dish = input("הכנס מנה שחייבת להיות בתכנון: ").strip()  # הסרת רווחים מיותרים
+required_dish = input("הכנס מנה שחייבת להיות בתכנון: ").strip().lower()  # הסרת רווחים מיותרים והמרה לאותיות קטנות
 allergies = input("הכנס אלרגיות (מופרדות בפסיקים): ").split(',')
 
-# ניקוי אלרגיות מיותרים
-allergies = [allergy.strip() for allergy in allergies if allergy.strip()]
+# ניקוי אלרגיות מיותרים והמרה לאותיות קטנות
+allergies = [allergy.strip().lower() for allergy in allergies if allergy.strip()]
 
 print("\nRequired Dish:", required_dish)
 print("Allergies:", allergies)
+
+# המרת שמות המנות והמרכיבים לאותיות קטנות לצורך השוואה
+dishes_data['Dish'] = dishes_data['Dish'].str.lower()
+for i in range(1, 6):
+    dishes_data[f'Ingredients {i}'] = dishes_data[f'Ingredients {i}'].str.lower()
+
+ingredients_data['Ingredient'] = ingredients_data['Ingredient'].str.lower()
 
 # אלגוריתם לבחירת מנות אופטימליות
 def optimized_selection(budget, required_dish, allergies, ingredients_data, dishes_data):
@@ -27,7 +31,7 @@ def optimized_selection(budget, required_dish, allergies, ingredients_data, dish
             return dishes
         filtered_dishes = []
         for index, row in dishes.iterrows():
-            if not any(allergy in ingredients_data[ingredients_data['Ingredient'] == row[f'Ingredients {i}']]['Ingredient'].values for allergy in allergies for i in range(1, 6) if pd.notna(row[f'Ingredients {i}'])):
+            if not any(allergy in row[f'Ingredients {i}'] for allergy in allergies for i in range(1, 6) if pd.notna(row[f'Ingredients {i}'])):
                 filtered_dishes.append(row)
         return pd.DataFrame(filtered_dishes)
 
@@ -80,28 +84,32 @@ def optimized_selection(budget, required_dish, allergies, ingredients_data, dish
                 budget -= dish_cost
 
     # חישוב רשימת המצרכים, העלות הכוללת, והערך התזונתי של הסל
-    ingredients = set()
+    ingredients = {}
     total_cost = 0
     for dish in selected_dishes:
-        dish_ingredients = []
         for i in range(1, 6):
             ingredient = dish[f'Ingredients {i}']
             if pd.notna(ingredient):
-                dish_ingredients.append(ingredient)
                 # חישוב עלות המצרכים
                 ingredient_price_row = ingredients_data[ingredients_data['Ingredient'] == ingredient]
                 if not ingredient_price_row.empty:
                     ingredient_price = ingredient_price_row['price'].values[0]
                     total_cost += ingredient_price
+                    if ingredient in ingredients:
+                        ingredients[ingredient] += 1
+                    else:
+                        ingredients[ingredient] = 1
                 else:
                     print(f"Warning: Ingredient '{ingredient}' not found in ingredients data.")
-        ingredients.update(dish_ingredients)
+
+    # הכנת רשימת המצרכים עם הכפולות המתאימות
+    ingredients_list = [f"{ingredient}*{count}" if count > 1 else ingredient for ingredient, count in ingredients.items()]
 
     remaining_budget = budget
     selected_dish_names = [dish['Dish'] for dish in selected_dishes]
     total_nutritional_value = sum(dish['Nutritional Value'] for dish in selected_dishes)
 
-    return selected_dish_names, ingredients, total_cost, total_nutritional_value, remaining_budget
+    return selected_dish_names, ingredients_list, total_cost, total_nutritional_value, remaining_budget
 
 # הפעלת הפונקציה והצגת הפלט
 result = optimized_selection(budget, required_dish, allergies, ingredients_data, dishes_data)
@@ -109,10 +117,9 @@ result = optimized_selection(budget, required_dish, allergies, ingredients_data,
 if result[1] is None:
     print(result[0])
 else:
-    selected_dish_names, ingredients, total_cost, total_nutritional_value, remaining_budget = result
+    selected_dish_names, ingredients_list, total_cost, total_nutritional_value, remaining_budget = result
     print(f"נבחרו המנות הבאות: {selected_dish_names}")
-    print(f"רשימת המצרכים: {ingredients}")
-    print(f"עלות כוללת: {total_cost}")
-    print(f"ערך תזונאי של הסל: {total_nutritional_value}")
-    print(f"עודף: {remaining_budget}")
->>>>>>> 4bb92327bfdda6edd20060ddc49488eec6de9d94
+    print(f"רשימת המצרכים: {ingredients_list}")
+    print(f"עלות כוללת: {total_cost:.3f}")
+    print(f"ערך תזונאי של הסל: {total_nutritional_value:.3f}")
+    print(f"עודף: {remaining_budget:.3f}")
