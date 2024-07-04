@@ -30,13 +30,14 @@ h1 {
 }
 
 img {
-    width: 150px; /* קבע את הגודל הרצוי */
+    width: 900px; /* קבע את הגודל הרצוי */
     height: auto;
     display: inline-block;
     margin: 20px;
-    position: absolute;
+    position: relative; /* מיקום יחסי */
     top: 20px;
-    left: 20px;
+    z-index: 1000; /* ערך גבוה כדי שהתמונה תהיה מעל כל הפריטים האחרים */
+    margin-right: 80px;
 }
 
 label {
@@ -56,4 +57,9 @@ button[type="submit"] {
     font-size: 1.2em; /* גודל הגופן של הכפתור */
     padding: 15px 30px; /* ריווח פנימי בכפתור */
     margin-top: 30px; /* מרווח מעל לכפתור */
+}
+
+.container {
+    position: relative;
+    margin-top: 1000px; /* מרווח מעל לתוכן כדי שהתוכן יופיע מתחת לתמונה */
 }
