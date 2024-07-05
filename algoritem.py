@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Read the Excel file with the updated path
-file_path = 'C:/Users/נעה/Desktop/תעשייה וניהול/שנה ב/סמסטר ב/חקבצ 2/פרויקט/data project.xlsx'
+file_path = 'C:\coding\Big project Hakbaz\update\performence_analysis_project\data project (4).xlsx'
 ingredients_data = pd.read_excel(file_path, sheet_name='Ingredients')
 dishes_data = pd.read_excel(file_path, sheet_name='Dishs')
 
