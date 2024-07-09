@@ -4,6 +4,7 @@ import os
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+
 # Read the Excel file with the updated path
 file_path = 'C:/Users/omera/OneDrive/שולחן העבודה/data project (4).xlsx'
 ingredients_data = pd.read_excel(file_path, sheet_name='Ingredients')
@@ -42,30 +43,16 @@ def optimized_selection_dp(budget, required_dish, allergies, ingredients_data, d
         return total_cost
 
     if required_dish:
-        while required_dish:
-            required_dish_row = dishes_data[dishes_data['Dish'] == required_dish]
-            if required_dish_row.empty:
-                return f"The dish '{required_dish}' is not in the database.", None, None, None, None, None
-            for i in range(1, 6):
-                ingredient = required_dish_row.iloc[0][f'Ingredients {i}']
-                if pd.notna(ingredient) and any(allergy == ingredient for allergy in allergies):
-                    return f"The requested dish '{required_dish}' contains your allergy '{ingredient}' and cannot be selected.", None, None, None, None, None
-            required_dish_cost = calculate_dish_cost(required_dish_row.iloc[0], ingredients_data)
-            if required_dish_cost > budget:
-                choice = input(
-                    f"The dish you requested is over budget. Do you want to continue planning without it (a/n) or enter a new budget (b)? ").strip().lower()
-                if choice == 'a':
-                    required_dish = None
-                elif choice == 'b':
-                    try:
-                        budget = float(input("Enter new budget: "))
-                    except ValueError:
-                        print("Invalid value, please enter a number.")
-                        return optimized_selection_dp(budget, required_dish, allergies, ingredients_data, dishes_data)
-                else:
-                    return "No valid option selected.", None, None, None, None, None
-            else:
-                break
+        required_dish_row = dishes_data[dishes_data['Dish'] == required_dish]
+        if required_dish_row.empty:
+            return f"The dish '{required_dish}' is not in the database.", None, None, None, None, None
+        for i in range(1, 6):
+            ingredient = required_dish_row.iloc[0][f'Ingredients {i}']
+            if pd.notna(ingredient) and any(allergy == ingredient for allergy in allergies):
+                return f"The requested dish '{required_dish}' contains your allergy '{ingredient}' and cannot be selected.", None, None, None, None, None
+        required_dish_cost = calculate_dish_cost(required_dish_row.iloc[0], ingredients_data)
+        if required_dish_cost > budget:
+            return f"The dish '{required_dish}' is over the budget of {budget}. Please select another dish or increase your budget.", None, None, None, None, None
 
     dishes_data = filter_dishes(dishes_data, allergies)
     budget_int = int(budget)
