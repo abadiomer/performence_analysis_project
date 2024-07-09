@@ -1,24 +1,13 @@
 import pandas as pd
+import webbrowser
+import os
+import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Read the Excel file with the updated path
-file_path = 'C:\coding\Big project Hakbaz\update\performence_analysis_project\data project (4).xlsx'
+file_path = 'C:/Users/omera/OneDrive/שולחן העבודה/data project (4).xlsx'
 ingredients_data = pd.read_excel(file_path, sheet_name='Ingredients')
 dishes_data = pd.read_excel(file_path, sheet_name='Dishs')
-
-# Function to get user inputs
-def get_user_inputs():
-    try:
-        budget = float(input("Enter the maximum budget: "))
-    except ValueError:
-        print("Invalid value, please enter a number.")
-        return get_user_inputs()
-    required_dish = input("Enter a dish that must be included: ").strip().lower()
-    allergies = input("Enter allergies (comma-separated): ").split(',')
-    # Clean up allergies and convert to lowercase
-    allergies = [allergy.strip().lower() for allergy in allergies if allergy.strip()]
-    return budget, required_dish, allergies
-
-budget, required_dish, allergies = get_user_inputs()
 
 # Convert dish and ingredient names to lowercase for comparison
 dishes_data['Dish'] = dishes_data['Dish'].str.lower()
@@ -27,19 +16,18 @@ for i in range(1, 6):
 
 ingredients_data['Ingredient'] = ingredients_data['Ingredient'].str.lower()
 
-# Algorithm for selecting optimal dishes
+
 def optimized_selection_dp(budget, required_dish, allergies, ingredients_data, dishes_data):
-    # Filter dishes based on allergies
     def filter_dishes(dishes, allergies):
         if not allergies:
             return dishes
         filtered_dishes = []
         for index, row in dishes.iterrows():
-            if not any(allergy in row[f'Ingredients {i}'] for allergy in allergies for i in range(1, 6) if pd.notna(row[f'Ingredients {i}'])):
+            if not any(allergy in row[f'Ingredients {i}'] for allergy in allergies for i in range(1, 6) if
+                       pd.notna(row[f'Ingredients {i}'])):
                 filtered_dishes.append(row)
         return pd.DataFrame(filtered_dishes)
 
-    # Calculate the total cost of ingredients in a dish
     def calculate_dish_cost(dish, ingredients_data):
         total_cost = 0
         for i in range(1, 6):
@@ -53,38 +41,34 @@ def optimized_selection_dp(budget, required_dish, allergies, ingredients_data, d
                     print(f"Warning: Ingredient '{ingredient}' not found in ingredients data.")
         return total_cost
 
-    # Check the required dish before filtering the dishes
-    while required_dish:
-        required_dish_row = dishes_data[dishes_data['Dish'] == required_dish]
-        if required_dish_row.empty:
-            return f"The dish '{required_dish}' is not in the database.", None, None, None, None, None
-        for i in range(1, 6):
-            ingredient = required_dish_row.iloc[0][f'Ingredients {i}']
-            if pd.notna(ingredient) and any(allergy == ingredient for allergy in allergies):
-                return f"The requested dish '{required_dish}' contains your allergy '{ingredient}' and cannot be selected.", None, None, None, None, None
-        required_dish_cost = calculate_dish_cost(required_dish_row.iloc[0], ingredients_data)
-        if required_dish_cost > budget:
-            choice = input(f"The dish you requested is over budget. Do you want to continue planning without it (a/n) or enter a new budget (b)? ").strip().lower()
-            if choice == 'a':
-                required_dish = None
-            elif choice == 'b':
-                try:
-                    budget = float(input("Enter new budget: "))
-                except ValueError:
-                    print("Invalid value, please enter a number.")
-                    return optimized_selection_dp(budget, required_dish, allergies, ingredients_data, dishes_data)
+    if required_dish:
+        while required_dish:
+            required_dish_row = dishes_data[dishes_data['Dish'] == required_dish]
+            if required_dish_row.empty:
+                return f"The dish '{required_dish}' is not in the database.", None, None, None, None, None
+            for i in range(1, 6):
+                ingredient = required_dish_row.iloc[0][f'Ingredients {i}']
+                if pd.notna(ingredient) and any(allergy == ingredient for allergy in allergies):
+                    return f"The requested dish '{required_dish}' contains your allergy '{ingredient}' and cannot be selected.", None, None, None, None, None
+            required_dish_cost = calculate_dish_cost(required_dish_row.iloc[0], ingredients_data)
+            if required_dish_cost > budget:
+                choice = input(
+                    f"The dish you requested is over budget. Do you want to continue planning without it (a/n) or enter a new budget (b)? ").strip().lower()
+                if choice == 'a':
+                    required_dish = None
+                elif choice == 'b':
+                    try:
+                        budget = float(input("Enter new budget: "))
+                    except ValueError:
+                        print("Invalid value, please enter a number.")
+                        return optimized_selection_dp(budget, required_dish, allergies, ingredients_data, dishes_data)
+                else:
+                    return "No valid option selected.", None, None, None, None, None
             else:
-                return "No valid option selected.", None, None, None, None, None
-        else:
-            break
+                break
 
-    # Filter dishes based on allergies
     dishes_data = filter_dishes(dishes_data, allergies)
-
-    # Convert budget to an integer for table creation
     budget_int = int(budget)
-    
-    # Create dynamic programming table
     n = len(dishes_data)
     dp = [[0] * (budget_int + 1) for _ in range(n + 1)]
 
@@ -98,7 +82,6 @@ def optimized_selection_dp(budget, required_dish, allergies, ingredients_data, d
             else:
                 dp[i][b] = max(dp[i - 1][b], dp[i - 1][b - int(dish_cost)] + dish_value)
 
-    # Build the optimal solution
     selected_dishes = []
     b = budget_int
     if required_dish:
@@ -113,7 +96,6 @@ def optimized_selection_dp(budget, required_dish, allergies, ingredients_data, d
                 selected_dishes.append(dish)
                 b -= int(calculate_dish_cost(dish, ingredients_data))
 
-    # Calculate the ingredient list, total cost, and nutritional value of the basket
     ingredients = {}
     total_cost = 0
     for dish in selected_dishes:
@@ -131,24 +113,64 @@ def optimized_selection_dp(budget, required_dish, allergies, ingredients_data, d
                 else:
                     print(f"Warning: Ingredient '{ingredient}' not found in ingredients data.")
 
-    # Prepare the ingredient list with appropriate quantities
     ingredients_list = [f"{ingredient}*{count}" if count > 1 else ingredient for ingredient, count in ingredients.items()]
-
     remaining_budget = budget - total_cost
     selected_dish_names = [dish['Dish'] for dish in selected_dishes]
     total_nutritional_value = sum(dish['Nutritional Value'] for dish in selected_dishes)
 
     return selected_dish_names, ingredients_list, total_cost, total_nutritional_value, remaining_budget
 
-# Run the function and display the output
-result = optimized_selection_dp(budget, required_dish, allergies, ingredients_data, dishes_data)
 
-if result[1] is None:
-    print(result[0])
-else:
-    selected_dish_names, ingredients_list, total_cost, total_nutritional_value, remaining_budget = result
-    print(f"The following dishes were selected: {selected_dish_names}")
-    print(f"Ingredient list: {ingredients_list}")
-    print(f"Total cost: {total_cost:.3f}")
-    print(f"Nutritional value of the basket: {total_nutritional_value:.3f}")
-    print(f"Remaining budget: {remaining_budget:.3f}")
+class RequestHandler(BaseHTTPRequestHandler):
+    def _set_headers(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+
+    def _html(self, message):
+        return message.encode('utf8')
+
+    def do_GET(self):
+        self._set_headers()
+        with open('input_form.html', 'r') as file:
+            html_content = file.read()
+        self.wfile.write(self._html(html_content))
+
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        data = json.loads(post_data.decode('utf-8'))
+
+        budget = float(data['budget'])
+        required_dish = data['requiredDish'].strip().lower() if data['requiredDish'] else None
+        allergies = [allergy.strip().lower() for allergy in data['allergies'].split(',')] if data['allergies'] else []
+
+        result = optimized_selection_dp(budget, required_dish, allergies, ingredients_data, dishes_data)
+        if result[1] is None:
+            output = f"<div class='results'><p>{result[0]}</p></div>"
+        else:
+            selected_dish_names, ingredients_list, total_cost, total_nutritional_value, remaining_budget = result
+            output = f"""
+            <div class='results'>
+                <p><span>The following dishes were selected:</span> {', '.join(selected_dish_names)}</p>
+                <p><span>Ingredient list:</span> {', '.join(ingredients_list)}</p>
+                <p><span>Total cost:</span> {total_cost:.3f}</p>
+                <p><span>Nutritional value of the basket:</span> {total_nutritional_value:.3f}</p>
+                <p><span>Remaining budget:</span> {remaining_budget:.3f}</p>
+            </div>
+            """
+
+        self._set_headers()
+        self.wfile.write(self._html(output))
+
+
+def run(server_class=HTTPServer, handler_class=RequestHandler, port=8000):
+    server_address = ('', port)
+    httpd = server_class(server_address, handler_class)
+    print(f'Starting httpd server on port {port}...')
+    httpd.serve_forever()
+
+
+if __name__ == "__main__":
+    webbrowser.open('http://localhost:8000')
+    run()
